@@ -1,130 +1,156 @@
 import React, { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 
-export function Auth() {
-  const [loading, setLoading] = useState(false);
+interface AuthProps {
+  onSuccess?: () => void;
+}
+
+export function Auth({ onSuccess }: AuthProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [mode, setMode] = useState<'login' | 'signup'>('login');
+  const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    try {
-      setLoading(true);
-      setError(null);
-      
-      // Try to sign in first
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+    setLoading(true);
+    setError(null);
 
-      // If sign in fails with invalid credentials, try to sign up
-      if (signInError?.message === 'Invalid login credentials') {
-        const { error: signUpError } = await supabase.auth.signUp({
+    try {
+      if (mode === 'signup') {
+        // Registro
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
         });
+        if (error) throw error;
 
-        if (signUpError) {
-          if (signUpError.message.includes('already registered')) {
-            setError('Incorrect password. Please try again.');
-          } else {
-            setError(signUpError.message);
-          }
+        const user = data.user;
+        if (user) {
+          // Asignar rol 'user'
+          const { error: roleError } = await supabase
+            .from('user_roles')
+            .insert([{ user_id: user.id, role: 'user' }]);
+          if (roleError) throw roleError;
         }
-      } else if (signInError) {
-        setError(signInError.message);
-      }
-    } catch (error) {
-      console.error('Error:', error);
-      setError(error instanceof Error ? error.message : 'An error occurred');
-    } finally {
-      setLoading(false);
-    }
-  };
 
-  const handleSignIn = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      setLoading(true);
-      setError(null);
-      
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (signInError) {
-        setError('Invalid email or password. Please try again.');
+        if (onSuccess) onSuccess();
+        navigate('/');
+      } else {
+        // Login
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+        if (error) throw error;
+        if (onSuccess) onSuccess();
+        navigate('/');
       }
-    } catch (error) {
-      console.error('Error:', error);
-      setError(error instanceof Error ? error.message : 'An error occurred');
+    } catch (err) {
+      console.error('Error durante la autenticación:', err);
+      setError(err instanceof Error ? err.message : JSON.stringify(err));
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="max-w-md mx-auto">
-      <div className="bg-white p-8 rounded-lg shadow-md">
-        <h2 className="text-2xl font-semibold text-gray-900 mb-6">Sign In or Sign Up</h2>
-        <form className="space-y-6">
-          {error && (
-            <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded">
-              {error}
+    <>
+      {/* 
+        Ajustamos un 'padding-top' para compensar el header de ~64px (4rem). 
+        Y definimos una altura mínima 'calc(100vh - 4rem)' 
+        para que, si no hay mucho contenido, no aparezca scroll. 
+      */}
+      <div className="pt-16 min-h-[calc(100vh-4rem)] flex items-center justify-center bg-white">
+        <div className="max-w-md w-full bg-white p-8 rounded-md shadow-md">
+          <h2 className="text-2xl font-bold text-center mb-6">
+            {mode === 'login' ? 'Iniciar Sesión' : 'Registrarse'}
+          </h2>
+
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {/* Email */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">
+                Correo Electrónico
+              </label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full rounded-md border border-gray-300 px-3 py-2
+                          focus:outline-none focus:ring-2 focus:ring-indigo-500
+                          focus:border-indigo-500"
+                required
+              />
             </div>
-          )}
-          
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-              Email
-            </label>
-            <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-              required
-            />
-          </div>
 
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-              Password
-            </label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-              required
-            />
-          </div>
+            {/* Password */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">
+                Contraseña
+              </label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full rounded-md border border-gray-300 px-3 py-2
+                          focus:outline-none focus:ring-2 focus:ring-indigo-500
+                          focus:border-indigo-500"
+                required
+              />
+            </div>
 
-          <div className="flex space-x-4">
+            {/* Error */}
+            {error && (
+              <div className="text-red-600 text-sm text-center">
+                {error}
+              </div>
+            )}
+
+            {/* Botón principal */}
             <button
-              type="button"
-              onClick={handleSignIn}
+              type="submit"
               disabled={loading}
-              className="flex-1 bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50"
+              className="w-full flex justify-center items-center py-2 px-4 rounded-md shadow-sm
+                        text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700
+                        focus:outline-none focus:ring-2 focus:ring-indigo-500
+                        focus:ring-offset-2 disabled:opacity-60"
             >
-              {loading ? 'Processing...' : 'Sign In'}
+              {loading
+                ? 'Cargando...'
+                : mode === 'login'
+                ? 'Iniciar Sesión'
+                : 'Registrarse'}
             </button>
+          </form>
+
+          {/* Links extras */}
+          <div className="mt-4 text-center space-y-3">
             <button
-              type="button"
-              onClick={handleSubmit}
-              disabled={loading}
-              className="flex-1 bg-gray-800 text-white px-4 py-2 rounded-md hover:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 disabled:opacity-50"
+              onClick={() => setMode(mode === 'login' ? 'signup' : 'login')}
+              className="text-sm font-medium text-indigo-600 hover:text-indigo-500"
             >
-              {loading ? 'Processing...' : 'Sign Up'}
+              {mode === 'login'
+                ? '¿No tienes cuenta? Regístrate'
+                : '¿Ya tienes cuenta? Inicia Sesión'}
             </button>
+
+            {mode === 'login' && (
+              <div>
+                <Link
+                  to="/reset-password"
+                  className="block text-sm font-medium text-indigo-600 hover:text-indigo-500 mt-2"
+                >
+                  ¿Olvidaste tu contraseña?
+                </Link>
+              </div>
+            )}
           </div>
-        </form>
+        </div>
       </div>
-    </div>
+    </>
   );
 }

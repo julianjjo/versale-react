@@ -1,275 +1,215 @@
-import React, { useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { Upload, X } from 'lucide-react';
-
-interface SellItemFormData {
-  title: string;
-  description: string;
-  price: number;
-  size: string;
-  condition: 'New' | 'Like New' | 'Good' | 'Fair';
-  category: string;
-}
 
 interface SellItemFormProps {
+  onClose: () => void;
   onSuccess: () => void;
 }
 
-const CATEGORIES = [
-  'Dresses',
-  'Tops',
-  'Bottoms',
-  'Outerwear',
-  'Shoes',
-  'Accessories',
-  'Other'
-];
+export function SellItemForm({ onClose, onSuccess }: SellItemFormProps) {
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [price, setPrice] = useState('');
+  const [size, setSize] = useState('');
+  const [condition, setCondition] = useState('');
+  const [category, setCategory] = useState('');
+  // Para almacenar los archivos seleccionados
+  const [files, setFiles] = useState<FileList | null>(null);
 
-export function SellItemForm({ onSuccess }: SellItemFormProps) {
-  const [uploading, setUploading] = useState(false);
-  const [images, setImages] = useState<string[]>([]);
-  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isSubmitting },
-    reset
-  } = useForm<SellItemFormData>();
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
 
-  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     try {
-      const files = event.target.files;
-      if (!files || files.length === 0) return;
+      // 1. Verificar usuario logueado
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) throw new Error('Debes iniciar sesión para vender artículos');
 
-      setUploading(true);
-      setUploadError(null);
+      // 2. Subir las imágenes (si el usuario seleccionó archivos)
+      let imageUrls: string[] = [];
+      if (files && files.length > 0) {
+        for (let i = 0; i < files.length; i++) {
+          const file = files[i];
+          const fileExt = file.name.split('.').pop();
+          // Generamos un nombre único en base al user.id y timestamp
+          const fileName = `${user.id}-${Date.now()}-${i}.${fileExt}`;
+          // Subimos al bucket "images_clothes"
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('images_clothes')
+            .upload(fileName, file);
 
-      const uploadedUrls: string[] = [];
-
-      for (const file of files) {
-        if (!file.type.startsWith('image/')) {
-          setUploadError('Please upload only image files');
-          continue;
-        }
-
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${Math.random()}.${fileExt}`;
-        const filePath = `${fileName}`;
-
-        const { error: uploadError, data } = await supabase.storage
-          .from('images_clothes')
-          .upload(filePath, file);
-
-        if (uploadError) {
-          throw uploadError;
-        }
-
-        const { data: { publicUrl } } = supabase.storage
-          .from('images_clothes')
-          .getPublicUrl(filePath);
-
-        uploadedUrls.push(publicUrl);
-      }
-
-      setImages(prev => [...prev, ...uploadedUrls]);
-    } catch (error) {
-      console.error('Error uploading image:', error);
-      setUploadError('Failed to upload image. Please try again.');
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const removeImage = (index: number) => {
-    setImages(prev => prev.filter((_, i) => i !== index));
-  };
-
-  const onSubmit = async (data: SellItemFormData) => {
-    try {
-      if (images.length === 0) {
-        setUploadError('Please upload at least one image');
-        return;
-      }
-
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      
-      if (userError || !user) {
-        throw new Error('Please sign in to list an item');
-      }
-
-      const { error: insertError } = await supabase
-        .from('items')
-        .insert([
-          {
-            title: data.title,
-            description: data.description,
-            price: data.price,
-            size: data.size,
-            condition: data.condition,
-            category: data.category,
-            seller_id: user.id,
-            images: images,
-            is_published: false // Items start as unpublished
+          if (uploadError) {
+            console.error('Error al subir la imagen:', uploadError);
+            throw new Error('No se pudo subir la imagen');
           }
-        ]);
+
+          // 3. Obtener URL pública
+          //   - Si tu bucket es público, con .getPublicUrl podemos construir la URL
+          //   - Si es privado, necesitarás firmar la URL.
+          const { data: publicData } = supabase.storage
+            .from('images_clothes')
+            .getPublicUrl(uploadData.path);
+
+          // Asegúrate de que tu bucket "images_clothes" tenga "Public access" activado
+          // o tengas una política RLS que permita su lectura.
+          imageUrls.push(publicData?.publicUrl || '');
+        }
+      }
+
+      // 4. Guardar en la tabla "items"
+      const { error: insertError } = await supabase.from('items').insert([
+        {
+          title,
+          description,
+          price: parseFloat(price),
+          size,
+          condition,
+          category,
+          seller_id: user.id,
+          is_published: false,
+          images: imageUrls, // <-- Guardamos el array de URLs en la columna "images"
+        },
+      ]);
 
       if (insertError) throw insertError;
 
-      reset();
-      setImages([]);
-      alert('Item submitted for review!');
+      // 5. Éxito
       onSuccess();
-    } catch (error) {
-      console.error('Error submitting form:', error);
-      alert(error instanceof Error ? error.message : 'Failed to list item. Please try again.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ocurrió un error');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-      <div>
-        <label className="block text-sm font-medium text-gray-700">Images</label>
-        <div className="mt-1 flex items-center space-x-4">
-          <label className="cursor-pointer inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-            <Upload className="h-5 w-5 mr-2" />
-            Upload Images
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-lg p-8 max-w-md w-full">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-bold">Vender un Artículo</h2>
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+            ✕
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Título */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Título</label>
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+              required
+            />
+          </div>
+
+          {/* Descripción */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Descripción</label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+              required
+            />
+          </div>
+
+          {/* Precio */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Precio</label>
+            <input
+              type="number"
+              value={price}
+              onChange={(e) => setPrice(e.target.value)}
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+              required
+            />
+          </div>
+
+          {/* Talla */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Talla</label>
+            <input
+              type="text"
+              value={size}
+              onChange={(e) => setSize(e.target.value)}
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+              required
+            />
+          </div>
+
+          {/* Condición */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Condición</label>
+            <select
+              value={condition}
+              onChange={(e) => setCondition(e.target.value)}
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+              required
+            >
+              <option value="">Seleccionar condición</option>
+              <option value="New">Nuevo</option>
+              <option value="Like New">Como Nuevo</option>
+              <option value="Good">Bueno</option>
+              <option value="Fair">Regular</option>
+            </select>
+          </div>
+
+          {/* Categoría */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Categoría</label>
+            <select
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+              required
+            >
+              <option value="">Seleccionar categoría</option>
+              <option value="tops">Superiores</option>
+              <option value="bottoms">Inferiores</option>
+              <option value="dresses">Vestidos</option>
+              <option value="outerwear">Prendas de Abrigo</option>
+              <option value="accessories">Accesorios</option>
+              <option value="shoes">Zapatos</option>
+            </select>
+          </div>
+
+          {/* Input para subir imágenes */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Imágenes</label>
             <input
               type="file"
               accept="image/*"
               multiple
-              onChange={handleImageUpload}
-              className="hidden"
-              disabled={uploading}
+              onChange={(e) => setFiles(e.target.files)}
+              className="mt-1 block w-full"
             />
-          </label>
-          {uploading && <span className="text-sm text-gray-500">Uploading...</span>}
-        </div>
-        {uploadError && (
-          <p className="mt-1 text-sm text-red-600">{uploadError}</p>
-        )}
-        {images.length > 0 && (
-          <div className="mt-4 grid grid-cols-3 gap-4">
-            {images.map((url, index) => (
-              <div key={url} className="relative">
-                <img
-                  src={url}
-                  alt={`Product ${index + 1}`}
-                  className="h-24 w-24 object-cover rounded-md"
-                />
-                <button
-                  type="button"
-                  onClick={() => removeImage(index)}
-                  className="absolute -top-2 -right-2 p-1 bg-red-100 rounded-full text-red-600 hover:bg-red-200"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-            ))}
+            <p className="text-xs text-gray-500 mt-1">
+              Puedes seleccionar varias imágenes.
+            </p>
           </div>
-        )}
-      </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700">Title</label>
-        <input
-          type="text"
-          {...register('title', { required: 'Title is required' })}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-        />
-        {errors.title && (
-          <p className="mt-1 text-sm text-red-600">{errors.title.message}</p>
-        )}
-      </div>
+          {/* Error */}
+          {error && <div className="text-red-600 text-sm">{error}</div>}
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700">Description</label>
-        <textarea
-          {...register('description', { required: 'Description is required' })}
-          rows={4}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-        />
-        {errors.description && (
-          <p className="mt-1 text-sm text-red-600">{errors.description.message}</p>
-        )}
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Price ($)</label>
-          <input
-            type="number"
-            step="0.01"
-            min="0"
-            {...register('price', {
-              required: 'Price is required',
-              min: { value: 0, message: 'Price must be positive' }
-            })}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-          />
-          {errors.price && (
-            <p className="mt-1 text-sm text-red-600">{errors.price.message}</p>
-          )}
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Size</label>
-          <input
-            type="text"
-            {...register('size', { required: 'Size is required' })}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-          />
-          {errors.size && (
-            <p className="mt-1 text-sm text-red-600">{errors.size.message}</p>
-          )}
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Condition</label>
-          <select
-            {...register('condition', { required: 'Condition is required' })}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+          {/* Botón de publicación */}
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
           >
-            <option value="">Select condition</option>
-            <option value="New">New</option>
-            <option value="Like New">Like New</option>
-            <option value="Good">Good</option>
-            <option value="Fair">Fair</option>
-          </select>
-          {errors.condition && (
-            <p className="mt-1 text-sm text-red-600">{errors.condition.message}</p>
-          )}
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Category</label>
-          <select
-            {...register('category', { required: 'Category is required' })}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-          >
-            <option value="">Select category</option>
-            {CATEGORIES.map(category => (
-              <option key={category} value={category}>{category}</option>
-            ))}
-          </select>
-          {errors.category && (
-            <p className="mt-1 text-sm text-red-600">{errors.category.message}</p>
-          )}
-        </div>
+            {loading ? 'Cargando...' : 'Publicar Artículo'}
+          </button>
+        </form>
       </div>
-
-      <div>
-        <button
-          type="submit"
-          disabled={isSubmitting || uploading}
-          className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
-        >
-          {isSubmitting ? 'Submitting...' : 'List Item'}
-        </button>
-      </div>
-    </form>
+    </div>
   );
 }
