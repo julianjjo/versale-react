@@ -70,11 +70,6 @@ export function Header({ onSellClick, onSearch }: HeaderProps) {
     }
   };
 
-  const navigateToFavorites = () => {
-    navigate('/favorites');
-    setShowMenu(false);
-  };
-
   const toggleMenu = () => setShowMenu(!showMenu);
 
   return (
@@ -82,7 +77,6 @@ export function Header({ onSellClick, onSearch }: HeaderProps) {
       <header className="bg-white shadow-sm fixed top-0 left-0 right-0 z-50">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 h-16">
           <div className="flex items-center justify-between h-full">
-            {/* Logo y búsqueda */}
             <div className="flex items-center space-x-4">
               <Link to="/" className="text-xl sm:text-2xl font-bold text-indigo-600">
                 Versale
@@ -98,7 +92,6 @@ export function Header({ onSellClick, onSearch }: HeaderProps) {
               </div>
             </div>
 
-            {/* Botones de acción y menú móvil */}
             <div className="flex items-center space-x-2 sm:space-x-4">
               <div className="sm:hidden">
                 <button
@@ -188,14 +181,14 @@ export function Header({ onSellClick, onSearch }: HeaderProps) {
         </div>
       </header>
 
-      {/* Menú móvil y overlay */}
+      {/* Mobile menu with fixed positioning and scroll */}
       {showMenu && (
         <>
           <div
             className="fixed inset-0 bg-black opacity-25 z-40"
             onClick={() => setShowMenu(false)}
           />
-          <div className="fixed top-16 left-0 right-0 z-50 bg-white shadow-md sm:hidden">
+          <nav className="fixed top-16 left-0 right-0 bottom-0 z-50 bg-white shadow-md sm:hidden overflow-y-auto">
             <div className="px-4 pt-4 pb-6 space-y-1">
               <div className="relative">
                 <input
@@ -239,7 +232,7 @@ export function Header({ onSellClick, onSearch }: HeaderProps) {
                   {isAdmin && (
                     <Link
                       to="/admin"
-                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
+                      className="flex items-center space-x-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                       onClick={() => setShowMenu(false)}
                     >
                       <Settings className="h-4 w-4" />
@@ -247,13 +240,14 @@ export function Header({ onSellClick, onSearch }: HeaderProps) {
                     </Link>
                   )}
 
-                  <button
-                    onClick={navigateToFavorites}
-                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
+                  <Link
+                    to="/favorites"
+                    className="flex items-center space-x-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    onClick={() => setShowMenu(false)}
                   >
                     <Heart className="h-4 w-4" />
                     <span>Favoritos</span>
-                  </button>
+                  </Link>
 
                   <button
                     onClick={handleLogout}
@@ -266,14 +260,15 @@ export function Header({ onSellClick, onSearch }: HeaderProps) {
               ) : (
                 <Link
                   to="/login"
-                  className="block px-4 py-2 text-sm text-indigo-600 hover:text-indigo-900"
+                  className="flex items-center space-x-2 px-4 py-2 text-sm text-indigo-600 hover:text-indigo-900"
                   onClick={() => setShowMenu(false)}
                 >
-                  Iniciar Sesión
+                  <User className="h-5 w-5" />
+                  <span>Iniciar Sesión</span>
                 </Link>
               )}
             </div>
-          </div>
+          </nav>
         </>
       )}
     </>
