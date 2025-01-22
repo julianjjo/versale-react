@@ -47,62 +47,68 @@ export function Checkout({ items, onPurchaseComplete }: CheckoutProps) {
 
   if (items.length === 0) {
     return (
-      <div className="p-4 text-center">
-        <h2 className="text-2xl font-bold">No hay artículos para comprar</h2>
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 py-6 pt-20 sm:pt-16">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold">No hay artículos para comprar</h2>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-md mx-auto my-8 p-4 bg-white shadow-md rounded-md">
-      <h2 className="text-2xl font-bold mb-4">Comprar</h2>
+    <div className="container mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 py-6 pt-20 sm:pt-16">
+      <div className="max-w-md mx-auto bg-white shadow-md rounded-md">
+        <div className="p-6">
+          <h2 className="text-2xl font-bold mb-6">Comprar</h2>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium mb-1">Nombre</label>
-          <input
-            type="text"
-            required
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="w-full border border-gray-300 rounded px-3 py-2"
-          />
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">Nombre</label>
+              <input
+                type="text"
+                required
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full border border-gray-300 rounded px-3 py-2"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">Dirección</label>
+              <input
+                type="text"
+                required
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                className="w-full border border-gray-300 rounded px-3 py-2"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">Teléfono</label>
+              <input
+                type="tel"
+                required
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                className="w-full border border-gray-300 rounded px-3 py-2"
+              />
+            </div>
+
+            <div className="pt-4 border-t">
+              <h3 className="font-semibold mb-4">
+                Subtotal: <span className="text-gray-700">${subtotal.toFixed(2)}</span>
+              </h3>
+
+              <button
+                type="submit"
+                className="w-full py-2 px-4 bg-green-600 text-white rounded-md hover:bg-green-700 transition font-medium"
+              >
+                Confirmar y Enviar a WhatsApp
+              </button>
+            </div>
+          </form>
         </div>
-
-        <div>
-          <label className="block text-sm font-medium mb-1">Dirección</label>
-          <input
-            type="text"
-            required
-            value={address}
-            onChange={(e) => setAddress(e.target.value)}
-            className="w-full border border-gray-300 rounded px-3 py-2"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium mb-1">Teléfono</label>
-          <input
-            type="tel"
-            required
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            className="w-full border border-gray-300 rounded px-3 py-2"
-          />
-        </div>
-
-        <button
-          type="submit"
-          className="w-full py-2 px-4 bg-green-600 text-white rounded-md hover:bg-green-700 transition font-medium"
-        >
-          Confirmar y Enviar a WhatsApp
-        </button>
-      </form>
-
-      <div className="mt-6">
-        <h3 className="font-semibold">
-          Subtotal: <span className="text-gray-700">${subtotal.toFixed(2)}</span>
-        </h3>
       </div>
     </div>
   );

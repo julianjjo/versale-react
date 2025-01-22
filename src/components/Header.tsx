@@ -79,8 +79,8 @@ export function Header({ onSellClick, onSearch }: HeaderProps) {
 
   return (
     <>
-      <header className="bg-white shadow-sm fixed top-0 left-0 right-0 z-50 h-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full">
+      <header className="bg-white shadow-sm fixed top-0 left-0 right-0 z-50">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 h-16">
           <div className="flex items-center justify-between h-full">
             {/* Logo y búsqueda */}
             <div className="flex items-center space-x-4">
@@ -159,13 +159,14 @@ export function Header({ onSellClick, onSearch }: HeaderProps) {
                             <span>Panel de Administración</span>
                           </Link>
                         )}
-                        <button
-                          onClick={navigateToFavorites}
-                          className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
+                        <Link
+                          to="/favorites"
+                          className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
+                          onClick={() => setShowMenu(false)}
                         >
                           <Heart className="h-4 w-4" />
                           <span>Favoritos</span>
-                        </button>
+                        </Link>
                         <button
                           onClick={handleLogout}
                           className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
@@ -208,7 +209,10 @@ export function Header({ onSellClick, onSearch }: HeaderProps) {
 
               {onSellClick && isAdmin && (
                 <button
-                  onClick={onSellClick}
+                  onClick={() => {
+                    onSellClick();
+                    setShowMenu(false);
+                  }}
                   className="w-full flex items-center space-x-2 px-4 py-2 bg-indigo-600 text-white rounded-full hover:bg-indigo-700 transition"
                 >
                   <PlusCircle className="h-5 w-5" />
