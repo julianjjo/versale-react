@@ -3,13 +3,14 @@ export interface ClothingItem {
   title: string;
   description: string;
   price: number;
+  quantity: number;
   size: string;
   condition: 'New' | 'Like New' | 'Good' | 'Fair';
   category: string;
   images: string[];
   sellerId: string;
   createdAt: Date;
-  isPublished: boolean;
+  is_published: boolean;
 }
 
 export interface User {
@@ -19,4 +20,10 @@ export interface User {
   avatar?: string;
   rating: number;
   role?: 'admin' | 'user';
+}
+
+export interface CartProps {
+  items: ClothingItem[];
+  onRemove: (itemId: string) => void;
+  onUpdateQuantity: (itemId: string, newQuantity: number) => void;
 }
