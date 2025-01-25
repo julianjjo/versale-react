@@ -22,9 +22,11 @@ interface HeaderProps {
 }
 
 export function Header({ onSellClick, onSearch }: HeaderProps) {
-  const [showMenu, setShowMenu] = useState(false);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
+  const mobileMenuRef = useRef<HTMLDivElement | null>(null);
   const navigate = useNavigate();
   const { isAdmin } = useAuth();
 
@@ -46,14 +48,23 @@ export function Header({ onSellClick, onSearch }: HeaderProps) {
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setShowMenu(false);
+      const isOutsideMobileMenu = mobileMenuRef.current &&
+        !mobileMenuRef.current.contains(event.target as Node);
+        
+      const isOutsideUserMenu = menuRef.current &&
+        !menuRef.current.contains(event.target as Node);
+
+      if (showMobileMenu && isOutsideMobileMenu) {
+        setShowMobileMenu(false);
+      }
+      if (showUserMenu && isOutsideUserMenu) {
+        setShowUserMenu(false);
       }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  }, [showMobileMenu, showUserMenu]);
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     onSearch(e.target.value);
@@ -62,15 +73,14 @@ export function Header({ onSellClick, onSearch }: HeaderProps) {
   const handleLogout = async () => {
     try {
       await supabase.auth.signOut();
-      setShowMenu(false);
+      setShowMobileMenu(false);
+      setShowUserMenu(false);
       navigate('/');
       window.location.reload();
     } catch (error) {
       console.error('Error al cerrar sesión:', error);
     }
   };
-
-  const toggleMenu = () => setShowMenu(!showMenu);
 
   return (
     <>
@@ -95,11 +105,11 @@ export function Header({ onSellClick, onSearch }: HeaderProps) {
             <div className="flex items-center space-x-2 sm:space-x-4">
               <div className="sm:hidden">
                 <button
-                  onClick={toggleMenu}
+                  onClick={() => setShowMobileMenu(!showMobileMenu)}
                   className="p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500"
                   aria-label="Menu"
                 >
-                  {showMenu ? (
+                  {showMobileMenu ? (
                     <X className="h-6 w-6 text-gray-600" />
                   ) : (
                     <Menu className="h-6 w-6 text-gray-600" />
@@ -133,12 +143,12 @@ export function Header({ onSellClick, onSearch }: HeaderProps) {
                 {userEmail ? (
                   <div className="relative" ref={menuRef}>
                     <button
-                      onClick={() => setShowMenu(!showMenu)}
+                      onClick={() => setShowUserMenu(!showUserMenu)}
                       className="p-2 hover:bg-gray-100 rounded-full focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     >
                       <User className="h-6 w-6 text-gray-600" />
                     </button>
-                    {showMenu && (
+                    {showUserMenu && (
                       <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-60">
                         <div className="px-4 py-2 text-sm text-gray-700 border-b border-gray-100">
                           <div className="font-medium">Cuenta</div>
@@ -148,7 +158,7 @@ export function Header({ onSellClick, onSearch }: HeaderProps) {
                           <Link
                             to="/admin"
                             className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
-                            onClick={() => setShowMenu(false)}
+                            onClick={() => setShowUserMenu(false)}
                           >
                             <Settings className="h-4 w-4" />
                             <span>Panel de Administración</span>
@@ -157,7 +167,7 @@ export function Header({ onSellClick, onSearch }: HeaderProps) {
                         <Link
                           to="/favorites"
                           className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
-                          onClick={() => setShowMenu(false)}
+                          onClick={() => setShowUserMenu(false)}
                         >
                           <Heart className="h-4 w-4" />
                           <span>Favoritos</span>
@@ -184,13 +194,13 @@ export function Header({ onSellClick, onSearch }: HeaderProps) {
       </header>
 
       {/* Mobile menu with fixed positioning and scroll */}
-      {showMenu && (
+      {showMobileMenu && (
         <>
           <div
             className="fixed inset-0 bg-black opacity-25 z-40"
-            onClick={() => setShowMenu(false)}
+            onClick={() => setShowMobileMenu(false)}
           />
-          <nav className="fixed top-16 left-0 right-0 bottom-0 z-50 bg-white shadow-md sm:hidden overflow-y-auto">
+          <nav ref={mobileMenuRef} className="fixed top-16 left-0 right-0 bottom-0 z-50 bg-white shadow-md sm:hidden overflow-y-auto">
             <div className="px-4 pt-4 pb-6 space-y-1">
               <div className="relative">
                 <input
@@ -206,7 +216,7 @@ export function Header({ onSellClick, onSearch }: HeaderProps) {
                 <button
                   onClick={() => {
                     onSellClick();
-                    setShowMenu(false);
+                    setShowMobileMenu(false);
                   }}
                   className="w-full flex items-center space-x-2 px-4 py-2 bg-indigo-600 text-white rounded-full hover:bg-indigo-700 transition"
                 >
@@ -219,7 +229,7 @@ export function Header({ onSellClick, onSearch }: HeaderProps) {
                 <Link
                   to="/cart"
                   className="flex items-center space-x-2 px-4 py-2 text-sm text-indigo-600 hover:text-indigo-900"
-                  onClick={() => setShowMenu(false)}
+                  onClick={() => setShowMobileMenu(false)}
                 >
                   <ShoppingCart className="h-5 w-5" />
                   <span>Carrito</span>
@@ -237,7 +247,7 @@ export function Header({ onSellClick, onSearch }: HeaderProps) {
                     <Link
                       to="/admin"
                       className="flex items-center space-x-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                      onClick={() => setShowMenu(false)}
+                      onClick={() => setShowMobileMenu(false)}
                     >
                       <Settings className="h-4 w-4" />
                       <span>Panel de Administración</span>
@@ -247,7 +257,7 @@ export function Header({ onSellClick, onSearch }: HeaderProps) {
                   <Link
                     to="/favorites"
                     className="flex items-center space-x-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                    onClick={() => setShowMenu(false)}
+                    onClick={() => setShowMobileMenu(false)}
                   >
                     <Heart className="h-4 w-4" />
                     <span>Favoritos</span>
@@ -265,7 +275,7 @@ export function Header({ onSellClick, onSearch }: HeaderProps) {
                 <Link
                   to="/login"
                   className="flex items-center space-x-2 px-4 py-2 text-sm text-indigo-600 hover:text-indigo-900"
-                  onClick={() => setShowMenu(false)}
+                  onClick={() => setShowMobileMenu(false)}
                 >
                   <User className="h-5 w-5" />
                   <span>Iniciar Sesión</span>
