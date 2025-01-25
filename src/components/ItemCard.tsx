@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Heart } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import type { ClothingItem } from '../types';
 import { supabase } from '../lib/supabase';
 
@@ -11,11 +12,20 @@ interface ItemCardProps {
 }
 
 export function ItemCard({ item, addToCart }: ItemCardProps) {
+  const navigate = useNavigate();
   const [isFavorite, setIsFavorite] = useState(false);
   const [loading, setLoading] = useState(false);
   const [session, setSession] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [imageLoaded, setImageLoaded] = useState(false);
+
+  const handleCardClick = (e: React.MouseEvent | React.KeyboardEvent) => {
+    // Prevent navigation if clicking on favorite or add to cart buttons
+    if ((e.target as HTMLElement).closest('button')) {
+      return;
+    }
+    navigate(`/product/${item.id}`);
+  };
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -92,7 +102,14 @@ export function ItemCard({ item, addToCart }: ItemCardProps) {
   };
 
   return (
-    <div className="relative">
+    <div
+      className="relative cursor-pointer outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2 rounded-xl"
+      onClick={handleCardClick}
+      onKeyDown={(e) => e.key === 'Enter' && handleCardClick(e)}
+      role="button"
+      tabIndex={0}
+      aria-label={`Ver detalles de ${item.title}`}
+    >
       {error && (
         <div className="absolute -top-2 left-0 right-0 z-10 mx-4">
           <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-2 rounded-lg text-sm">
