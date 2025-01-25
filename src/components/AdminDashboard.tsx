@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { CheckCircle, XCircle, Users, ShoppingBag, Edit2 } from 'lucide-react';
-import type { ClothingItem, User } from '../types';
+import { CheckCircle, XCircle, Users, ShoppingBag, Edit2, Tags } from 'lucide-react';
+import type { ClothingItem, User, Category } from '../types';
 import { EditItemForm } from './EditItemForm';
+import { CategoriesManager } from './CategoriesManager';
 
 export function AdminDashboard() {
   const [items, setItems] = useState<ClothingItem[]>([]);
   const [users, setUsers] = useState<User[]>([]);
-  const [activeTab, setActiveTab] = useState<'items' | 'users'>('items');
+  const [activeTab, setActiveTab] = useState<'items' | 'users' | 'categories'>('items');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editingItem, setEditingItem] = useState<ClothingItem | null>(null);
@@ -24,11 +25,17 @@ export function AdminDashboard() {
       if (activeTab === 'items') {
         const { data: itemsData, error: itemsError } = await supabase
           .from('items')
-          .select('*')
+          .select(`
+            *,
+            category:categories(name)
+          `)
           .order('created_at', { ascending: false });
 
         if (itemsError) throw itemsError;
-        setItems(itemsData as ClothingItem[]);
+        setItems(itemsData.map(item => ({
+          ...item,
+          category: item.category?.name || 'Sin categoría'
+        })) as ClothingItem[]);
       } else {
         // Usar la función segura para obtener información de usuarios
         const { data: usersData, error: usersError } = await supabase
@@ -113,7 +120,7 @@ export function AdminDashboard() {
                 activeTab === 'items'
                   ? 'border-indigo-500 text-indigo-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              } flex items-center w-1/2 py-4 px-1 border-b-2 font-medium text-sm`}
+              } flex items-center w-1/3 py-4 px-1 border-b-2 font-medium text-sm`}
             >
               <ShoppingBag className="h-5 w-5 mr-2" />
               Artículos
@@ -124,10 +131,21 @@ export function AdminDashboard() {
                 activeTab === 'users'
                   ? 'border-indigo-500 text-indigo-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              } flex items-center w-1/2 py-4 px-1 border-b-2 font-medium text-sm`}
+              } flex items-center w-1/3 py-4 px-1 border-b-2 font-medium text-sm`}
             >
               <Users className="h-5 w-5 mr-2" />
               Usuarios
+            </button>
+            <button
+              onClick={() => setActiveTab('categories')}
+              className={`${
+                activeTab === 'categories'
+                  ? 'border-indigo-500 text-indigo-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              } flex items-center w-1/3 py-4 px-1 border-b-2 font-medium text-sm`}
+            >
+              <Tags className="h-5 w-5 mr-2" />
+              Categorías
             </button>
           </nav>
         </div>
@@ -138,6 +156,8 @@ export function AdminDashboard() {
           </div>
         ) : error ? (
           <div className="p-8 text-center text-red-600">{error}</div>
+        ) : activeTab === 'categories' ? (
+          <CategoriesManager />
         ) : activeTab === 'items' ? (
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
@@ -174,7 +194,7 @@ export function AdminDashboard() {
                             {item.title}
                           </div>
                           <div className="text-sm text-gray-500">
-                            {item.category}
+                            {typeof item.category === 'object' ? item.category.name : item.category}
                           </div>
                         </div>
                       </div>

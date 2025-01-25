@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import type { ClothingItem } from '../types';
+import type { ClothingItem, Category } from '../types';
 
 interface EditItemFormProps {
   item: ClothingItem;
@@ -13,10 +13,30 @@ export function EditItemForm({ item, onClose, onSuccess }: EditItemFormProps) {
   const [description, setDescription] = useState(item.description);
   const [price, setPrice] = useState(item.price.toString());
   const [size, setSize] = useState(item.size);
-  const [condition, setCondition] = useState(item.condition.toLowerCase());
-  const [category, setCategory] = useState(item.category);
+  const [condition, setCondition] = useState(item.condition);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [selectedCategoryId, setSelectedCategoryId] = useState(item.categoryId);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
+  const fetchCategories = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('categories')
+        .select('*')
+        .order('name');
+
+      if (error) throw error;
+      setCategories(data || []);
+    } catch (err) {
+      console.error('Error al cargar categorías:', err);
+      setError('Error al cargar las categorías');
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,7 +52,7 @@ export function EditItemForm({ item, onClose, onSuccess }: EditItemFormProps) {
           price: parseFloat(price),
           size,
           condition,
-          category,
+          category: selectedCategoryId
         })
         .eq('id', item.id);
 
@@ -116,15 +136,14 @@ export function EditItemForm({ item, onClose, onSuccess }: EditItemFormProps) {
             </label>
             <select
               value={condition}
-              onChange={(e) => setCondition(e.target.value)}
+              onChange={(e) => setCondition(e.target.value as ClothingItem['condition'])}
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
               required
             >
-              <option value="">Seleccionar condición</option>
-              <option value="New">Nuevo</option>
-              <option value="Like New">Como Nuevo</option>
-              <option value="Good">Bueno</option>
-              <option value="Fair">Regular</option>
+              <option value="Nuevo">Nuevo</option>
+              <option value="Como Nuevo">Como Nuevo</option>
+              <option value="Bueno">Bueno</option>
+              <option value="Regular">Regular</option>
             </select>
           </div>
 
@@ -133,18 +152,17 @@ export function EditItemForm({ item, onClose, onSuccess }: EditItemFormProps) {
               Categoría
             </label>
             <select
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
+              value={selectedCategoryId}
+              onChange={(e) => setSelectedCategoryId(e.target.value)}
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
               required
             >
               <option value="">Seleccionar categoría</option>
-              <option value="tops">Superiores</option>
-              <option value="bottoms">Inferiores</option>
-              <option value="dresses">Vestidos</option>
-              <option value="outerwear">Prendas de Abrigo</option>
-              <option value="accessories">Accesorios</option>
-              <option value="shoes">Zapatos</option>
+              {categories.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.name}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -160,7 +178,7 @@ export function EditItemForm({ item, onClose, onSuccess }: EditItemFormProps) {
             {loading ? 'Guardando...' : 'Guardar Cambios'}
           </button>
         </form>
-        </div>
+      </div>
     </div>
   );
 }

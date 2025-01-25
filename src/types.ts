@@ -5,8 +5,9 @@ export interface ClothingItem {
   price: number;
   quantity: number;
   size: string;
-  condition: 'New' | 'Like New' | 'Good' | 'Fair';
-  category: string;
+  condition: 'Nuevo' | 'Como Nuevo' | 'Bueno' | 'Regular';
+  categoryId: string;
+  category?: Category;
   images: string[];
   sellerId: string;
   createdAt: Date;
@@ -26,4 +27,17 @@ export interface CartProps {
   items: ClothingItem[];
   onRemove: (itemId: string) => void;
   onUpdateQuantity: (itemId: string, newQuantity: number) => void;
+}
+
+export interface Category {
+  id: string;
+  name: string;
+  description: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface CategoryFormData {
+  name: string;
+  description: string;
 }

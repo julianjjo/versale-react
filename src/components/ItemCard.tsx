@@ -100,8 +100,8 @@ export function ItemCard({ item, addToCart }: ItemCardProps) {
           </div>
         </div>
       )}
-      <div className="bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden">
-        <div className="relative aspect-square group">
+      <div className="bg-white rounded-xl shadow hover:shadow-lg transition-all duration-300 overflow-hidden">
+        <div className="relative aspect-[4/5] group">
           {!imageLoaded && (
             <div className="absolute inset-0 bg-gray-100 animate-pulse" />
           )}
@@ -130,12 +130,12 @@ export function ItemCard({ item, addToCart }: ItemCardProps) {
             />
           </button>
         </div>
-        <div className="p-4 sm:p-5 space-y-3">
+        <div className="p-5 sm:p-6 space-y-4">
           <div className="flex items-start justify-between">
-            <h3 className="text-base sm:text-lg font-semibold text-gray-900 line-clamp-2">
+            <h3 className="text-lg sm:text-xl font-semibold text-gray-900 line-clamp-2">
               {item.title}
             </h3>
-            <p className="text-lg sm:text-xl font-bold text-indigo-600 ml-4">
+            <p className="text-xl sm:text-2xl font-bold text-indigo-600 ml-4">
               ${item.price.toLocaleString()}
             </p>
           </div>
