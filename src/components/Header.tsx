@@ -1,7 +1,7 @@
 // src/components/Header.tsx
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import {
   Search,
   PlusCircle,
@@ -79,7 +79,7 @@ export function Header({ onSellClick, onSearch }: HeaderProps) {
           <div className="flex items-center justify-between h-full">
             <div className="flex items-center space-x-4">
               <Link to="/" className="text-xl sm:text-2xl font-bold text-indigo-600">
-                Versale
+                ReNova2
               </Link>
               <div className="hidden sm:block relative">
                 <input
@@ -118,13 +118,15 @@ export function Header({ onSellClick, onSearch }: HeaderProps) {
                   </button>
                 )}
 
-                <Link
-                  to="/cart"
-                  className="text-sm text-indigo-600 hover:text-indigo-900 flex items-center space-x-1"
-                >
-                  <ShoppingCart className="h-5 w-5" />
-                  <span className="hidden sm:inline">Carrito</span>
-                </Link>
+                {!isAdmin && (
+                  <Link
+                    to="/cart"
+                    className="text-sm text-indigo-600 hover:text-indigo-900 flex items-center space-x-1"
+                  >
+                    <ShoppingCart className="h-5 w-5" />
+                    <span className="hidden sm:inline">Carrito</span>
+                  </Link>
+                )}
               </div>
 
               <div className="hidden sm:block">
@@ -213,14 +215,16 @@ export function Header({ onSellClick, onSearch }: HeaderProps) {
                 </button>
               )}
 
-              <Link
-                to="/cart"
-                className="flex items-center space-x-2 px-4 py-2 text-sm text-indigo-600 hover:text-indigo-900"
-                onClick={() => setShowMenu(false)}
-              >
-                <ShoppingCart className="h-5 w-5" />
-                <span>Carrito</span>
-              </Link>
+              {!isAdmin && (
+                <Link
+                  to="/cart"
+                  className="flex items-center space-x-2 px-4 py-2 text-sm text-indigo-600 hover:text-indigo-900"
+                  onClick={() => setShowMenu(false)}
+                >
+                  <ShoppingCart className="h-5 w-5" />
+                  <span>Carrito</span>
+                </Link>
+              )}
 
               {userEmail ? (
                 <div className="border-t border-gray-200 pt-2">

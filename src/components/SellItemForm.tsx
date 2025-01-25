@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import type { Category } from '../types';
 
 interface SellItemFormProps {
   onClose: () => void;
@@ -12,12 +13,30 @@ export function SellItemForm({ onClose, onSuccess }: SellItemFormProps) {
   const [price, setPrice] = useState('');
   const [size, setSize] = useState('');
   const [condition, setCondition] = useState('');
-  const [category, setCategory] = useState('');
-  // Para almacenar los archivos seleccionados
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [selectedCategoryId, setSelectedCategoryId] = useState('');
   const [files, setFiles] = useState<FileList | null>(null);
-
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
+  const fetchCategories = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('categories')
+        .select('*')
+        .order('name');
+
+      if (error) throw error;
+      setCategories(data || []);
+    } catch (err) {
+      console.error('Error al cargar categorías:', err);
+      setError('Error al cargar las categorías');
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,15 +50,13 @@ export function SellItemForm({ onClose, onSuccess }: SellItemFormProps) {
       } = await supabase.auth.getUser();
       if (!user) throw new Error('Debes iniciar sesión para vender artículos');
 
-      // 2. Subir las imágenes (si el usuario seleccionó archivos)
       let imageUrls: string[] = [];
       if (files && files.length > 0) {
         for (let i = 0; i < files.length; i++) {
           const file = files[i];
           const fileExt = file.name.split('.').pop();
-          // Generamos un nombre único en base al user.id y timestamp
           const fileName = `${user.id}-${Date.now()}-${i}.${fileExt}`;
-          // Subimos al bucket "images_clothes"
+          
           const { data: uploadData, error: uploadError } = await supabase.storage
             .from('images_clothes')
             .upload(fileName, file);
@@ -49,15 +66,10 @@ export function SellItemForm({ onClose, onSuccess }: SellItemFormProps) {
             throw new Error('No se pudo subir la imagen');
           }
 
-          // 3. Obtener URL pública
-          //   - Si tu bucket es público, con .getPublicUrl podemos construir la URL
-          //   - Si es privado, necesitarás firmar la URL.
           const { data: publicData } = supabase.storage
             .from('images_clothes')
             .getPublicUrl(uploadData.path);
 
-          // Asegúrate de que tu bucket "images_clothes" tenga "Public access" activado
-          // o tengas una política RLS que permita su lectura.
           imageUrls.push(publicData?.publicUrl || '');
         }
       }
@@ -70,16 +82,14 @@ export function SellItemForm({ onClose, onSuccess }: SellItemFormProps) {
           price: parseFloat(price),
           size,
           condition,
-          category,
+          category: selectedCategoryId,
           seller_id: user.id,
           is_published: false,
-          images: imageUrls, // <-- Guardamos el array de URLs en la columna "images"
+          images: imageUrls,
         },
       ]);
 
       if (insertError) throw insertError;
-
-      // 5. Éxito
       onSuccess();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ocurrió un error');
@@ -99,7 +109,6 @@ export function SellItemForm({ onClose, onSuccess }: SellItemFormProps) {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Título */}
           <div>
             <label className="block text-sm font-medium text-gray-700">Título</label>
             <input
@@ -111,7 +120,6 @@ export function SellItemForm({ onClose, onSuccess }: SellItemFormProps) {
             />
           </div>
 
-          {/* Descripción */}
           <div>
             <label className="block text-sm font-medium text-gray-700">Descripción</label>
             <textarea
@@ -122,7 +130,6 @@ export function SellItemForm({ onClose, onSuccess }: SellItemFormProps) {
             />
           </div>
 
-          {/* Precio */}
           <div>
             <label className="block text-sm font-medium text-gray-700">Precio</label>
             <input
@@ -134,7 +141,6 @@ export function SellItemForm({ onClose, onSuccess }: SellItemFormProps) {
             />
           </div>
 
-          {/* Talla */}
           <div>
             <label className="block text-sm font-medium text-gray-700">Talla</label>
             <input
@@ -146,7 +152,6 @@ export function SellItemForm({ onClose, onSuccess }: SellItemFormProps) {
             />
           </div>
 
-          {/* Condición */}
           <div>
             <label className="block text-sm font-medium text-gray-700">Condición</label>
             <select
@@ -156,33 +161,30 @@ export function SellItemForm({ onClose, onSuccess }: SellItemFormProps) {
               required
             >
               <option value="">Seleccionar condición</option>
-              <option value="New">Nuevo</option>
-              <option value="Like New">Como Nuevo</option>
-              <option value="Good">Bueno</option>
-              <option value="Fair">Regular</option>
+              <option value="Nuevo">Nuevo</option>
+              <option value="Como Nuevo">Como Nuevo</option>
+              <option value="Bueno">Bueno</option>
+              <option value="Regular">Regular</option>
             </select>
           </div>
 
-          {/* Categoría */}
           <div>
             <label className="block text-sm font-medium text-gray-700">Categoría</label>
             <select
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
+              value={selectedCategoryId}
+              onChange={(e) => setSelectedCategoryId(e.target.value)}
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
               required
             >
               <option value="">Seleccionar categoría</option>
-              <option value="tops">Superiores</option>
-              <option value="bottoms">Inferiores</option>
-              <option value="dresses">Vestidos</option>
-              <option value="outerwear">Prendas de Abrigo</option>
-              <option value="accessories">Accesorios</option>
-              <option value="shoes">Zapatos</option>
+              {categories.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.name}
+                </option>
+              ))}
             </select>
           </div>
 
-          {/* Input para subir imágenes */}
           <div>
             <label className="block text-sm font-medium text-gray-700">Imágenes</label>
             <input
@@ -197,10 +199,8 @@ export function SellItemForm({ onClose, onSuccess }: SellItemFormProps) {
             </p>
           </div>
 
-          {/* Error */}
           {error && <div className="text-red-600 text-sm">{error}</div>}
 
-          {/* Botón de publicación */}
           <button
             type="submit"
             disabled={loading}
