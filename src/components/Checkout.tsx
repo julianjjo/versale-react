@@ -34,9 +34,8 @@ export function Checkout({ items, onPurchaseComplete }: CheckoutProps) {
       2
     )}%0A%0ADetalles de envío:%0ANombre: ${encodeURIComponent(name)}%0ADirección: ${encodeURIComponent(address)}%0ATeléfono: ${encodeURIComponent(phone)}`;
 
-    // Reemplaza <WHATSAPP_NUMBER> con tu número
-    // Ejemplo: "573225107534" sin el +
-    const whatsappNumber = '573003979242';
+    // Get WhatsApp number from env and remove the + if present
+    const whatsappNumber = import.meta.env.VITE_WHATSAPP_NUMBER.replace('+', '');
 
     // Abrimos la ventana de WhatsApp con el mensaje
     const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${message}`;
