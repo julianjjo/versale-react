@@ -1,2 +1,0 @@
-process.env.VITE_SUPABASE_URL = 'https://bknoprplykznmuublwby.supabase.co';
-process.env.VITE_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJrbm9wcnBseWt6bm11dWJsd2J5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzYzNjA5MjIsImV4cCI6MjA1MTkzNjkyMn0.RjPiQiq48GnVlVotwPc2UK8hCUFDoc2-HuZi7_2k5wo';
