@@ -189,6 +189,11 @@ export function ProductView({ item, addToCart }: ProductViewProps) {
               <span className="px-3 py-1.5 text-sm font-medium bg-indigo-100 text-indigo-800 rounded-full">
                 {item.condition}
               </span>
+              <span className={`px-3 py-1.5 text-sm font-medium rounded-full ${
+                item.stock > 0 ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+              }`}>
+                {item.stock > 0 ? `${item.stock} disponibles` : 'Vendido'}
+              </span>
               {item.category && (
                 <span className="px-3 py-1.5 text-sm font-medium bg-green-100 text-green-800 rounded-full">
                   {item.category.name}
@@ -224,9 +229,14 @@ export function ProductView({ item, addToCart }: ProductViewProps) {
             <div className="flex items-center space-x-4">
               <button
                 onClick={() => addToCart(item)}
-                className="flex-1 bg-indigo-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-indigo-700 transition-colors duration-200"
+                disabled={item.stock <= 0}
+                className={`flex-1 px-6 py-3 rounded-lg font-medium transition-colors duration-200 ${
+                  item.stock > 0
+                    ? 'bg-indigo-600 text-white hover:bg-indigo-700'
+                    : 'bg-gray-100 text-gray-500 cursor-not-allowed'
+                }`}
               >
-                Agregar al Carrito
+                {item.stock > 0 ? 'Agregar al Carrito' : 'Vendido'}
               </button>
             </div>
           </div>

@@ -11,6 +11,7 @@ export function SellItemForm({ onClose, onSuccess }: SellItemFormProps) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState('');
+  const [stock, setStock] = useState('0');
   const [size, setSize] = useState('');
   const [condition, setCondition] = useState('');
   const [categories, setCategories] = useState<Category[]>([]);
@@ -44,6 +45,17 @@ export function SellItemForm({ onClose, onSuccess }: SellItemFormProps) {
     setError(null);
 
     try {
+      // Validate stock and price
+      const stockNum = parseInt(stock);
+      if (isNaN(stockNum) || stockNum < 0) {
+        throw new Error('El stock debe ser un número válido mayor o igual a 0');
+      }
+
+      const priceNum = parseFloat(price);
+      if (isNaN(priceNum) || priceNum < 0) {
+        throw new Error('El precio debe ser un número válido mayor o igual a 0');
+      }
+
       // 1. Verificar usuario logueado
       const {
         data: { user },
@@ -62,7 +74,6 @@ export function SellItemForm({ onClose, onSuccess }: SellItemFormProps) {
             .upload(fileName, file);
 
           if (uploadError) {
-            console.error('Error al subir la imagen:', uploadError);
             throw new Error('No se pudo subir la imagen');
           }
 
@@ -79,7 +90,8 @@ export function SellItemForm({ onClose, onSuccess }: SellItemFormProps) {
         {
           title,
           description,
-          price: parseFloat(price),
+          price: priceNum,
+          stock: stockNum,
           size,
           condition,
           category: selectedCategoryId,
@@ -136,6 +148,18 @@ export function SellItemForm({ onClose, onSuccess }: SellItemFormProps) {
               type="number"
               value={price}
               onChange={(e) => setPrice(e.target.value)}
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Stock Disponible</label>
+            <input
+              type="number"
+              min="0"
+              value={stock}
+              onChange={(e) => setStock(e.target.value)}
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
               required
             />

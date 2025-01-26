@@ -27,14 +27,18 @@ export function AdminDashboard() {
           .from('items')
           .select(`
             *,
-            category:categories(name)
+            categories (
+              id,
+              name
+            )
           `)
           .order('created_at', { ascending: false });
 
         if (itemsError) throw itemsError;
         setItems(itemsData.map(item => ({
           ...item,
-          category: item.category?.name || 'Sin categoría'
+          categoryId: item.category,
+          category: item.categories?.name || 'Sin categoría'
         })) as ClothingItem[]);
       } else {
         // Usar la función segura para obtener información de usuarios
@@ -170,6 +174,9 @@ export function AdminDashboard() {
                     Precio
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Stock
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Estado
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -201,6 +208,17 @@ export function AdminDashboard() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">${item.price}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">
+                        {item.stock || 0}
+                        <button
+                          onClick={() => setEditingItem(item)}
+                          className="ml-2 inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-700 hover:bg-gray-200"
+                        >
+                          Actualizar
+                        </button>
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${

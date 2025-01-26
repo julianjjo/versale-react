@@ -1,5 +1,4 @@
-// src/components/Cart.tsx
-import React from 'react';
+import React, { useState } from 'react';
 import { useCart } from '../context/CartContext';
 
 interface CartComponentProps {
@@ -14,6 +13,17 @@ export function Cart({ onCheckout }: CartComponentProps): JSX.Element {
     updateCartQuantity,
     fetchCart,
   } = useCart();
+  
+  const [error, setError] = useState<string | null>(null);
+
+  const handleQuantityUpdate = async (itemId: string, newQuantity: number) => {
+    try {
+      setError(null);
+      await updateCartQuantity(itemId, newQuantity);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al actualizar la cantidad');
+    }
+  };
 
   const totalItems = cartItems.reduce((acc, item) => acc + (item.quantity || 1), 0);
   const subtotal = cartItems.reduce(
@@ -44,37 +54,47 @@ export function Cart({ onCheckout }: CartComponentProps): JSX.Element {
                   />
                   <div className="mt-4">
                     <h3 className="text-lg font-semibold">{item.title}</h3>
-                    <p className="text-gray-500 capitalize">{item.category}</p>
+                    <p className="text-gray-500 capitalize">{typeof item.category === 'object' ? item.category.name : item.category}</p>
                     <p className="text-gray-900 font-bold mt-1">
                       ${item.price}
                     </p>
 
                     {/* Sección para manejar cantidad */}
                     <div className="mt-2 flex items-center space-x-2">
-                      <button
-                        onClick={() =>
-                          updateCartQuantity(
-                            item.id,
-                            Math.max(1, (item.quantity || 1) - 1)
-                          )
-                        }
-                        className="px-2 py-1 text-sm bg-gray-200 rounded hover:bg-gray-300"
-                        disabled={(item.quantity || 1) <= 1}
-                      >
-                        -
-                      </button>
-                      <span>{item.quantity || 1}</span>
-                      <button
-                        onClick={() =>
-                          updateCartQuantity(
-                            item.id,
-                            (item.quantity || 1) + 1
-                          )
-                        }
-                        className="px-2 py-1 text-sm bg-gray-200 rounded hover:bg-gray-300"
-                      >
-                        +
-                      </button>
+                      <div className="flex flex-col space-y-2">
+                        <div className="flex items-center space-x-2">
+                          <button
+                            onClick={() =>
+                              handleQuantityUpdate(
+                                item.id,
+                                Math.max(1, (item.quantity || 1) - 1)
+                              )
+                            }
+                            className="px-2 py-1 text-sm bg-gray-200 rounded hover:bg-gray-300"
+                            disabled={(item.quantity || 1) <= 1}
+                          >
+                            -
+                          </button>
+                          <span>{item.quantity || 1}</span>
+                          <button
+                            onClick={() =>
+                              handleQuantityUpdate(
+                                item.id,
+                                (item.quantity || 1) + 1
+                              )
+                            }
+                            className="px-2 py-1 text-sm bg-gray-200 rounded hover:bg-gray-300"
+                          >
+                            +
+                          </button>
+                        </div>
+                        <span className="text-xs text-gray-500">
+                          Stock disponible: {item.stock}
+                        </span>
+                        {error && (
+                          <p className="text-xs text-red-500">{error}</p>
+                        )}
+                      </div>
                     </div>
 
                     <button
