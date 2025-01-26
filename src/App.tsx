@@ -8,6 +8,7 @@ import { CartProvider } from './context/CartContext';
 import { Header } from './components/Header';
 import { SellItemForm } from './components/SellItemForm';
 import { AppRoutes } from './routes/AppRoutes';
+import { WhatsAppButton } from './components/WhatsAppButton';
 
 function App() {
   // Manejo de búsqueda
@@ -38,6 +39,7 @@ function App() {
               onSuccess={() => setShowSellForm(false)}
             />
           )}
+          <WhatsAppButton />
         </BrowserRouter>
       </CartProvider>
     </AuthProvider>

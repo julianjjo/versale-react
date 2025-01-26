@@ -40,6 +40,7 @@ export function Checkout({ items, onPurchaseComplete }: CheckoutProps): JSX.Elem
           .single()
       );
 
+
       // Execute all purchase inserts (triggers will handle stock updates)
       const results = await Promise.all(purchasePromises);
       const errors = results.filter(r => r.error).map(r => r.error);
@@ -63,7 +64,7 @@ export function Checkout({ items, onPurchaseComplete }: CheckoutProps): JSX.Elem
         2
       )}%0A%0ADetalles de envío:%0ANombre: ${encodeURIComponent(name)}%0ADirección: ${encodeURIComponent(address)}%0ATeléfono: ${encodeURIComponent(phone)}`;
 
-      const whatsappNumber = '573003979242';
+      const whatsappNumber = import.meta.env.VITE_WHATSAPP_NUMBER.replace('+', '');
       const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${message}`;
       window.open(whatsappUrl, '_blank');
 
