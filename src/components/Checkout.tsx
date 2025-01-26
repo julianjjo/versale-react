@@ -1,17 +1,18 @@
-// src/components/Checkout.tsx
-
 import React, { useState } from 'react';
 import type { ClothingItem } from '../types';
+import { supabase } from '../lib/supabase';
+import { useCart } from '../context/CartContext';
 
 interface CheckoutProps {
   items: ClothingItem[];
   onPurchaseComplete: () => void;
 }
 
-export function Checkout({ items, onPurchaseComplete }: CheckoutProps) {
+export function Checkout({ items, onPurchaseComplete }: CheckoutProps): JSX.Element {
   const [name, setName] = useState('');
   const [address, setAddress] = useState('');
   const [phone, setPhone] = useState('');
+  const { clearCart } = useCart();
 
   // Calculamos el subtotal solo a manera de confirmación
   const subtotal = items.reduce(
@@ -19,29 +20,59 @@ export function Checkout({ items, onPurchaseComplete }: CheckoutProps) {
     0
   );
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Formateamos la lista de artículos
-    const itemsText = items
-      .map(
-        (i) =>
-          `- ${i.title} (x${i.quantity || 1}) => $${(i.price * (i.quantity || 1)).toFixed(2)}`
-      )
-      .join('%0A'); // %0A = salto de línea en la URL
+    try {
+      // Begin a transaction
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Usuario no autenticado');
 
-    const message = `¡Hola! Quiero realizar un pedido:%0A%0A${itemsText}%0A%0ASubtotal: $${subtotal.toFixed(
-      2
-    )}%0A%0ADetalles de envío:%0ANombre: ${encodeURIComponent(name)}%0ADirección: ${encodeURIComponent(address)}%0ATeléfono: ${encodeURIComponent(phone)}`;
+      // Create purchase records for each item
+      const purchasePromises = items.map(item =>
+        supabase
+          .from('purchases')
+          .insert({
+            user_id: user.id,
+            item_id: item.id,
+            quantity: item.quantity || 1
+          })
+          .single()
+      );
 
-    // Get WhatsApp number from env and remove the + if present
-    const whatsappNumber = import.meta.env.VITE_WHATSAPP_NUMBER.replace('+', '');
 
-    // Abrimos la ventana de WhatsApp con el mensaje
-    const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${message}`;
-    window.open(whatsappUrl, '_blank');
+      // Execute all purchase inserts (triggers will handle stock updates)
+      const results = await Promise.all(purchasePromises);
+      const errors = results.filter(r => r.error).map(r => r.error);
+      
+      if (errors.length > 0) {
+        throw new Error(`Error al procesar la compra: ${errors[0]?.message}`);
+      }
 
-    onPurchaseComplete();
+      // Clear cart after successful stock update
+      await clearCart();
+
+      // Formateamos la lista de artículos
+      const itemsText = items
+        .map(
+          (i) =>
+            `- ${i.title} (x${i.quantity || 1}) => $${(i.price * (i.quantity || 1)).toFixed(2)}`
+        )
+        .join('%0A');
+
+      const message = `¡Hola! Quiero realizar un pedido:%0A%0A${itemsText}%0A%0ASubtotal: $${subtotal.toFixed(
+        2
+      )}%0A%0ADetalles de envío:%0ANombre: ${encodeURIComponent(name)}%0ADirección: ${encodeURIComponent(address)}%0ATeléfono: ${encodeURIComponent(phone)}`;
+
+      const whatsappNumber = import.meta.env.VITE_WHATSAPP_NUMBER.replace('+', '');
+      const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${message}`;
+      window.open(whatsappUrl, '_blank');
+
+      onPurchaseComplete();
+    } catch (error) {
+      console.error('Error en el proceso de compra:', error);
+      alert('Hubo un error al procesar la compra. Por favor, intenta de nuevo.');
+    }
   };
 
   if (items.length === 0) {

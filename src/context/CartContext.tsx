@@ -66,8 +66,23 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const addToCart = async (item: ClothingItem) => {
     if (!userId) return;
     try {
+      // Get current stock
+      const { data: stockData, error: stockError } = await supabase
+        .from('items')
+        .select('stock')
+        .eq('id', item.id)
+        .single();
+      
+      if (stockError) throw stockError;
+      if (!stockData || stockData.stock <= 0) {
+        throw new Error('No hay stock disponible');
+      }
+
       const existing = cartItems.find((ci) => ci.id === item.id);
       if (existing) {
+        if ((existing.quantity || 1) >= stockData.stock) {
+          throw new Error('Stock insuficiente');
+        }
         await updateCartQuantity(item.id, (existing.quantity || 1) + 1);
       } else {
         const { error } = await supabase
@@ -105,6 +120,20 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const updateCartQuantity = async (itemId: string, newQuantity: number) => {
     if (!userId) return;
     try {
+      // Check stock availability
+      const { data: stockData, error: stockError } = await supabase
+        .from('items')
+        .select('stock')
+        .eq('id', itemId)
+        .single();
+      
+      if (stockError) throw stockError;
+      if (!stockData) throw new Error('Producto no encontrado');
+      
+      if (newQuantity > stockData.stock) {
+        throw new Error(`Solo hay ${stockData.stock} unidades disponibles`);
+      }
+
       const { error } = await supabase
         .from('cart_items')
         .update({ quantity: newQuantity })
@@ -120,6 +149,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       );
     } catch (err) {
       console.error(err);
+      throw err; // Re-throw para manejar el error en el componente
     }
   };
 

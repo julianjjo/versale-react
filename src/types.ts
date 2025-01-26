@@ -3,7 +3,8 @@ export interface ClothingItem {
   title: string;
   description: string;
   price: number;
-  quantity: number;
+  stock: number;
+  quantity?: number;  // Optional for cart items
   size: string;
   condition: 'Nuevo' | 'Como Nuevo' | 'Bueno' | 'Regular';
   categoryId: string;
