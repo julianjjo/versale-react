@@ -103,12 +103,14 @@ export function ItemCard({ item, addToCart }: ItemCardProps) {
 
   return (
     <div
-      className="relative cursor-pointer outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2 rounded-xl"
-      onClick={handleCardClick}
-      onKeyDown={(e) => e.key === 'Enter' && handleCardClick(e)}
+      className={`relative outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2 rounded-xl ${
+        item.stock > 0 ? 'cursor-pointer hover:shadow-lg' : 'opacity-75'
+      }`}
+      onClick={item.stock > 0 ? handleCardClick : undefined}
+      onKeyDown={item.stock > 0 ? (e) => e.key === 'Enter' && handleCardClick(e) : undefined}
       role="button"
-      tabIndex={0}
-      aria-label={`Ver detalles de ${item.title}`}
+      tabIndex={item.stock > 0 ? 0 : -1}
+      aria-label={`Ver detalles de ${item.title}${item.stock === 0 ? ' - Vendido' : ''}`}
     >
       {error && (
         <div className="absolute -top-2 left-0 right-0 z-10 mx-4">
@@ -156,20 +158,30 @@ export function ItemCard({ item, addToCart }: ItemCardProps) {
               ${item.price.toLocaleString()}
             </p>
           </div>
-          <div className="flex items-center justify-between pt-2">
+          <div className="flex items-center justify-between gap-2 pt-2 flex-wrap">
             <span className="px-3 py-1.5 text-sm font-medium bg-gray-100 text-gray-800 rounded-full">
               {item.size}
             </span>
             <span className="px-3 py-1.5 text-sm font-medium bg-indigo-100 text-indigo-800 rounded-full">
               {item.condition}
             </span>
+            {item.stock === 0 && (
+              <span className="px-3 py-1.5 text-sm font-medium bg-yellow-100 text-yellow-800 rounded-full">
+                Vendido
+              </span>
+            )}
           </div>
 
           <button
             onClick={() => addToCart(item)}
-            className="w-full mt-3 inline-flex items-center justify-center px-4 py-2.5 rounded-lg text-sm font-medium bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors duration-200 min-h-[44px]"
+            disabled={item.stock === 0}
+            className={`w-full mt-3 inline-flex items-center justify-center px-4 py-2.5 rounded-lg text-sm font-medium transition-colors duration-200 min-h-[44px] ${
+              item.stock > 0
+                ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                : 'bg-gray-100 text-gray-500 cursor-not-allowed'
+            }`}
           >
-            Agregar al Carrito
+            {item.stock > 0 ? 'Agregar al Carrito' : 'Vendido'}
           </button>
         </div>
       </div>

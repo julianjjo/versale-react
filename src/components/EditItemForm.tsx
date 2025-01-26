@@ -12,6 +12,7 @@ export function EditItemForm({ item, onClose, onSuccess }: EditItemFormProps) {
   const [title, setTitle] = useState(item.title);
   const [description, setDescription] = useState(item.description);
   const [price, setPrice] = useState(item.price.toString());
+  const [stock, setStock] = useState(item.stock?.toString() || '0');
   const [size, setSize] = useState(item.size);
   const [condition, setCondition] = useState(item.condition);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -44,16 +45,31 @@ export function EditItemForm({ item, onClose, onSuccess }: EditItemFormProps) {
     setError(null);
 
     try {
+      // Validate stock is a number
+      const stockNum = parseInt(stock);
+      if (isNaN(stockNum) || stockNum < 0) {
+        throw new Error('El stock debe ser un número válido mayor o igual a 0');
+      }
+
+      // Validate price is a number
+      const priceNum = parseFloat(price);
+      if (isNaN(priceNum) || priceNum < 0) {
+        throw new Error('El precio debe ser un número válido mayor o igual a 0');
+      }
+
+      const updateData = {
+        title,
+        description,
+        price: priceNum,
+        stock: stockNum,
+        size,
+        condition,
+        category: selectedCategoryId // matches the database column name
+      };
+
       const { error } = await supabase
         .from('items')
-        .update({
-          title,
-          description,
-          price: parseFloat(price),
-          size,
-          condition,
-          category: selectedCategoryId
-        })
+        .update(updateData)
         .eq('id', item.id);
 
       if (error) throw error;
@@ -112,6 +128,20 @@ export function EditItemForm({ item, onClose, onSuccess }: EditItemFormProps) {
               type="number"
               value={price}
               onChange={(e) => setPrice(e.target.value)}
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700">
+              Stock Disponible
+            </label>
+            <input
+              type="number"
+              min="0"
+              value={stock}
+              onChange={(e) => setStock(e.target.value)}
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
               required
             />
